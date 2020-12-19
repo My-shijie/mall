@@ -1,6 +1,6 @@
 <template>
-  <div class="goods-item">
-    <img :src="goodsItem.show.img" @load="imageLoad">
+  <div class="goods-item" @click="itemClick">
+    <img v-lazy="showImage" @load="imageLoad">
     <div class="goods-info">
       <p>{{goodsItem.title}}</p>
       <span class="price">{{goodsItem.price}}</span>
@@ -20,16 +20,23 @@
         }
       }
     },
+    computed: {
+      // 父组件（首页组件和详情页组件）传进来的数据可能有点不同，在这里取不同的数据进行展示
+      showImage() {
+        // 前面详情页组件，后面首页组件（掉乱顺序会报错）
+        return this.goodsItem.image || this.goodsItem.show.img
+      }
+    },
     methods: {
       // 监听 图片加载事件
       // 没加载完一次图片就执行refresh()，可以解决scroll上拉bug
       imageLoad() {
-        // 方法一 
-        // this.$parent.$parent.scroll.refresh()
-
-        // 方法二 
         // 向祖先组件发送事件（可以选择事件总线 $bus.$emit）
         this.$bus.$emit('itemImageLoad')
+      },
+      // 点击图片跳转
+      itemClick() {
+        this.$router.push('/detail/' + this.goodsItem.iid)
       }
     }
   }

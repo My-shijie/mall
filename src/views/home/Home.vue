@@ -34,10 +34,10 @@
   import TabControl from 'components/content/tabControl/TabControl'
   import GoodsList from 'components/content/goods/GoodsList'
   import Scroll from 'components/common/scroll/Scroll'
-  import BackTop from 'components/content/backTop/BackTop'
 
   import {getHomeMultidata, getHomeGoods} from 'network/home'
   import {debounce} from 'common/utils'
+  import {itemListenerMixin, backTopMixin} from 'common/mixin'
 
   export default {
     name: 'Home',
@@ -48,9 +48,10 @@
       NavBar,
       TabControl,
       GoodsList,
-      Scroll,
-      BackTop
+      Scroll
     },
+    // 混入（监听GoodsListItem组件中图片加载完成）
+    mixins: [itemListenerMixin, backTopMixin],
     data() {
       return {
         banners: [],
@@ -61,10 +62,10 @@
           'sell': {page:0, list: []},
         },
         currentType: 'pop',
-        isShowBackTop: false,
         tabOffsetTop: 0,
         isTabFixed: false,
-        saveY: 0
+        saveY: 0,
+        itemImgListener: null
       }
     },
     methods: {
@@ -88,21 +89,14 @@
         this.$refs.tabControl1.currentIndex = index;
         this.$refs.tabControl2.currentIndex = index;
       },
-      // 回到顶部
-      backClick() {
-        // this.$refs.scroll 表示获取组件对象
-        // console.log(this.$refs.scroll);
-        // 调用Scroll组件的scrollTo()，回到顶部
-        this.$refs.scroll.scrollTo(0, 0, 500)
-      },
       // 监听滚动的位置
       contentScroll(position) {
         // console.log(position.y);
         // 1.设置BackTop标签的显示和隐藏的临界值
-        this.isShowBackTop = Math.abs(position.y) > 1000
+        this.listenShowBackTop(position);
 
         // 2.决定tabControl是否吸顶（position: fixed）
-        this.isTabFixed = Math.abs(position.y) > this.tabOffsetTop
+        this.isTabFixed = Math.abs(position.y) > this.tabOffsetTop;
       },
       // 上拉加载更多
       loadMore() {
@@ -158,19 +152,6 @@
       this.getHomeGoods('new')
       this.getHomeGoods('sell')
     },
-    mounted() {
-      // 1.可以获取组件对象
-      // console.log(this.$refs.sc)
-      // 2.可以获取某个指定元素
-      // console.log(this.$refs.text)
-
-      // 监听GoodsListItem组件中图片加载完成
-      const refresh = debounce(this.$refs.scroll.refresh, 50)
-      this.$bus.$on('itemImageLoad', () => {
-        // 没加载一张图片就刷新一次（解决scroll上拉bug）
-        refresh()
-      })
-    },
     destroyed() {
       console.log('home destroyed');
     },
@@ -180,9 +161,12 @@
       this.$refs.scroll.scrollTo(0, this.saveY, 0)
     },
     deactivated() {
-      // 组件处于不活跃（不选中）状态时，保存当前用户滚动的 Y轴位置
+      // 1.组件处于不活跃（不选中）状态时，保存当前用户滚动的 Y轴位置
       this.saveY = this.$refs.scroll.getScrollY()
-      console.log(this.saveY);
+      // console.log(this.saveY);
+
+      // 2.取消全局事件的监听
+      this.$bus.$off('itemImageLoad', this.itemImgListener)
     }
   }
 </script>
